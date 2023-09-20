@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+examples/simon-says/debug.cfg
+examples/simon-says/debug.svd
+examples/simon-says/debug_custom.json
