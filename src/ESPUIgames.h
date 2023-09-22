@@ -47,6 +47,7 @@ class ESPUIgames	{
 		char* gameTitle = nullptr;											//Game title on page
 		uint8_t gameLength = 4;												//Length of game in turns, should that be important for the specific game
 		uint8_t* gameChoices = nullptr;										//Series of game choices if that should be important for the specific game
+		bool* buttonTriggered = nullptr;
 		static constexpr uint8_t maximumNumberOfGameButtons = 16;			//Max number of game buttons
 		ControlColor defaultGameColour = ControlColor::Wetasphalt;			//Default colour for most controls
 		ControlColor highlightGameColour = ControlColor::Carrot;			//Highlight colour for most controls
@@ -70,9 +71,11 @@ class ESPUIgames	{
 		bool gameWon = false;
 		bool computerTurn = true;
 		uint8_t gamePosition = 0;											//How far in is the game, in turns
-		uint8_t successLevel = 0;											//What is the current success level
+		uint16_t successLevel = 0;											//What is the current success level
 		uint32_t gameTimer = 0;
-		uint32_t gameDelay = 0;
+		uint32_t gameDelay = 5000;
+		uint32_t maxGameDelay = 5000;
+		uint32_t gameSpeedupAmount = 250;
 		uint32_t gameMoveTimeout = 15000;
 		bool buttonLit = false;												//Is any game button lit?
 		const uint32_t playButtonOnTime = 750;								//Time the play button is lit
@@ -85,7 +88,12 @@ class ESPUIgames	{
 		void startNewGame();												//Start a new game
 		void stopCurrentGame();												//Stop a running game
 		void resetGame();													//Reset to go again
+		void loseGame();													//Lose the game
 		void lightEverything(ControlColor colour);
+		void newMole();
+		void whackMole(uint8_t index);
+		void gameSpeedup();													//Speed up the game a little
+		void gameSpeedReset();												//Reset the game to slightly less than the starting speed
 		//Tabs
 		uint16_t gameTabIDs[2];												//Storage for the game tab IDs
 		char* gameTabLabels[2] = {nullptr, nullptr};
@@ -112,11 +120,13 @@ class ESPUIgames	{
 		char* startSwitchLabel;
 		//Play buttons
 		uint16_t gamePlayButtonIDs[maximumNumberOfGameButtons];
-		uint8_t numberOfGameButtons = 0;									//Number of game buttons
+		uint8_t numberOfGamePlayButtons = 0;								//Number of game buttons
+		uint8_t numberOfLitPlayButtons = 0;
 		char* gamePlayButtonTitle[maximumNumberOfGameButtons];				//Button titles set at runtime
 		char* gamePlayButtonLabel[maximumNumberOfGameButtons];				//Button labels set at runtime
 		ControlColor gamePlayButtonColour[maximumNumberOfGameButtons];		//Button colours set at runtime
 		void lightButton(uint8_t index);									//Light up a specific button
+		void lightButton(uint8_t index, ControlColor colour);				//Light up a specific button a specific colour
 		void extinguishButton(uint8_t index);								//Extinguish a specific button
 		uint8_t buttonIndexFromId(uint16_t id);								//Find a play button index give the ESPUI control ID
 		//Callback functions

@@ -70,7 +70,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 			debug_uart_->println(startSwitchLabel);
 		}
 		startSwitchWidgetId = ESPUI.addControl(ControlType::Switcher, startSwitchLabel, startSwitchLabel, defaultGameColour, gameTabIDs[0], &startSwitchCallback);
-		ESPUI.setPanelWide(startSwitchWidgetId, true);
+		//ESPUI.setPanelWide(startSwitchWidgetId, true);
 	}
 	//Add the win box
 	if(gameWinLabel != nullptr && gameWinContent != nullptr)
@@ -103,10 +103,17 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 		ESPUI.addControl(ControlType::Separator, "", "", ControlColor::None, gameTabIDs[0]);
 	}
 	//Add the play buttons
-	if(numberOfGameButtons == 0)
+	if(numberOfGamePlayButtons == 0)
 	{
-		numberOfGameButtons = 4;
-		for(uint8_t index = 0; index < numberOfGameButtons; index++)
+		if(typeOfGame == gameType::simon)
+		{
+			numberOfGamePlayButtons = 4;
+		}
+		else if(typeOfGame == gameType::whackamole)
+		{
+			numberOfGamePlayButtons = 6;
+		}
+		for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 		{
 			gamePlayButtonTitle[index] = new char[12];
 			sprintf_P(gamePlayButtonTitle[index], PSTR("Button %u"), index);
@@ -119,17 +126,21 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 				debug_uart_->println(gamePlayButtonLabel[index]);
 			}
 			gamePlayButtonIDs[index] = ESPUI.addControl(ControlType::Button, gamePlayButtonTitle[index], gamePlayButtonLabel[index], defaultGameColour, gameTabIDs[0], &playButtonCallback);
-			ESPUI.setPanelWide(gamePlayButtonIDs[index], true);
+			//ESPUI.setPanelWide(gamePlayButtonIDs[index], true);
 		}
 	}
 	//Set the pushed button flags to 'none'
 	buttonLit = false;
-	buttonPushed = numberOfGameButtons;
-	buttonReleased = numberOfGameButtons;
+	buttonPushed = numberOfGamePlayButtons;
+	buttonReleased = numberOfGamePlayButtons;
 	//Assign storage for the game choices, if necessary
 	if(typeOfGame == gameType::simon)
 	{
 		gameChoices = new uint8_t[gameLength];
+	}
+	else if(typeOfGame == gameType::whackamole)
+	{
+		buttonTriggered = new bool[numberOfGamePlayButtons];
 	}
 	#ifdef ESP8266
 	} // HeapSelectIram
@@ -172,7 +183,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::addHelpTab()
 		debug_uart_->println(gameHelpContent);
 	}
 	helpLabelID = ESPUI.addControl(ControlType::Label, gameHelpLabel, gameHelpContent, defaultGameColour, gameTabIDs[1]);
-	ESPUI.setPanelWide(helpLabelID, true);
+	//ESPUI.setPanelWide(helpLabelID, true);
 	#ifdef ESP8266
 	} // HeapSelectIram
 	#endif
@@ -456,7 +467,7 @@ bool ESPUIgames::addPlayButton(char* title, char* label, ControlColor colour)
 	#ifdef ESP8266
 	{ HeapSelectIram doAllocationsInIRAM;
 	#endif
-	if(numberOfGameButtons == maximumNumberOfGameButtons)
+	if(numberOfGamePlayButtons == maximumNumberOfGameButtons)
 	{
 		return false;
 	}
@@ -467,10 +478,14 @@ bool ESPUIgames::addPlayButton(char* title, char* label, ControlColor colour)
 }
 void ESPUIgames::lightButton(uint8_t index)
 {
+	lightButton(index, gamePlayButtonColour[index]);
+}
+void ESPUIgames::lightButton(uint8_t index, ControlColor colour)
+{
 	#ifdef ESP8266
 	{ HeapSelectIram doAllocationsInIRAM;
 	#endif
-	ESPUI.getControl(gamePlayButtonIDs[index])->color = gamePlayButtonColour[index];
+	ESPUI.getControl(gamePlayButtonIDs[index])->color = colour;
 	ESPUI.updateControl(gamePlayButtonIDs[index]);
 	if(debug_uart_ != nullptr)
 	{
@@ -505,7 +520,7 @@ void ESPUIgames::lightEverything(ControlColor colour)
 		ESPUI.getControl(startSwitchWidgetId)->color = colour;
 		ESPUI.updateControl(startSwitchWidgetId);
 	}
-	for(uint8_t index = 0; index < numberOfGameButtons; index++)
+	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
 		ESPUI.getControl(gamePlayButtonIDs[index])->color = colour;
 		ESPUI.updateControl(gamePlayButtonIDs[index]);
@@ -519,7 +534,7 @@ uint8_t ESPUIgames::buttonIndexFromId(uint16_t id)
 	#ifdef ESP8266
 	{ HeapSelectIram doAllocationsInIRAM;
 	#endif
-	for(uint8_t index = 0; index < numberOfGameButtons; index++)
+	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
 		if(gamePlayButtonIDs[index] == id)
 		{
@@ -543,20 +558,32 @@ void ESPUIgames::startNewGame()
 		if(typeOfGame == gameType::simon)
 		{
 			debug_uart_->print(gameTypeDescriptionSimon);
+			debug_uart_->printf_P(PSTR("game, %02u turns long\r\n"),gameLength);
 		}
 		else if(typeOfGame == gameType::whackamole)
 		{
-			debug_uart_->print(gameTypeDescriptionWhackAmole);
+			debug_uart_->println(gameTypeDescriptionWhackAmole);
 		}
-		debug_uart_->printf_P(PSTR("game, %02u turns long\r\n"),gameLength);
 	}
-	for(uint8_t i = 0; i < gameLength;i++)
+	if(typeOfGame == gameType::simon)	//Decide game moves
 	{
-		gameChoices[i] = random(0,4);
-		if(debug_uart_ != nullptr)
+		for(uint8_t i = 0; i < gameLength;i++)
 		{
-			debug_uart_->print(gameChoices[i]);
-			debug_uart_->print(' ');
+			gameChoices[i] = random(0,4);
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print(gameChoices[i]);
+				debug_uart_->print(' ');
+			}
+		}
+	}
+	else if(typeOfGame == gameType::whackamole)	//Clear moles
+	{
+		gameDelay = 5000;
+		maxGameDelay = 5000;
+		for(uint8_t index = 0; index < numberOfGamePlayButtons;index++)
+		{
+			buttonTriggered[index] = false;
 		}
 	}
 	if(debug_uart_ != nullptr)
@@ -568,13 +595,14 @@ void ESPUIgames::startNewGame()
 		ESPUI.getControl(startSwitchWidgetId)->color = highlightGameColour;
 		ESPUI.updateControl(startSwitchWidgetId);
 	}
-	for(uint8_t index = 0; index < numberOfGameButtons; index++)
+	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
 		extinguishButton(index);
 	}
 	hideLoseWidget();
 	hideWinWidget();
 	gameLost = false;
+	numberOfLitPlayButtons = 0;
 	gameStarted = true;
 	gameDelay = 5000; //Wait 5s before starting the game
 	gameTimer = millis();
@@ -600,7 +628,7 @@ void ESPUIgames::stopCurrentGame()
 		ESPUI.getControl(startSwitchWidgetId)->color = defaultGameColour;
 		ESPUI.updateControl(startSwitchWidgetId);
 	}
-	for(uint8_t index = 0; index < numberOfGameButtons; index++)
+	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
 		extinguishButton(index);
 	}
@@ -631,7 +659,7 @@ void ESPUIgames::resetGame()
 		ESPUI.getControl(startSwitchWidgetId)->color = defaultGameColour;
 		ESPUI.updateControl(startSwitchWidgetId);
 	}
-	for(uint8_t index = 0; index < numberOfGameButtons; index++)
+	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
 		extinguishButton(index);
 	}
@@ -710,9 +738,9 @@ void ESPUIgames::runFsm()
 				}
 			}
 			*/
-			if(buttonPushed != numberOfGameButtons)
+			if(buttonPushed != numberOfGamePlayButtons)
 			{
-				buttonPushed = numberOfGameButtons; //Cancel the early push;
+				buttonPushed = numberOfGamePlayButtons; //Cancel the early push;
 			}
 		}
 		else
@@ -814,7 +842,7 @@ void ESPUIgames::runFsm()
 			}
 			else //Player turn
 			{
-				if(buttonPushed != numberOfGameButtons)
+				if(buttonPushed != numberOfGamePlayButtons)
 				{
 					if(buttonLit == false)  //Check pushed button
 					{
@@ -825,23 +853,14 @@ void ESPUIgames::runFsm()
 							lightButton(buttonPushed);
 							buttonLit = true;
 						}
-						else  //Wrong button, light them all
+						else  //Wrong button, you lose
 						{
-							buttonLit = true;
-							gameLost = true;
-							lightEverything(loseGameColour);
-							showLoseWidget();
-							//meshEventToAnnounce = meshHackFail;
-							if(debug_uart_ != nullptr)
-							{
-								debug_uart_->print(debugGameSpace);
-								debug_uart_->println(debugLost);
-							}
+							loseGame();
 						}
-						buttonPushed = numberOfGameButtons; //Cancel the push;
+						buttonPushed = numberOfGamePlayButtons; //Cancel the push;
 					}
 				}
-				if(buttonReleased != numberOfGameButtons) //Released
+				if(buttonReleased != numberOfGamePlayButtons) //Released
 				{
 					if(gameLost == false && buttonLit == true && millis() - gameTimer > minimumOnTime)
 					{
@@ -849,7 +868,7 @@ void ESPUIgames::runFsm()
 						buttonLit = false;
 						gamePosition++;
 					}
-					buttonReleased = numberOfGameButtons;
+					buttonReleased = numberOfGamePlayButtons;
 				}
 				if(buttonLit == true) //Time the button out if held a long time
 				{
@@ -869,21 +888,9 @@ void ESPUIgames::runFsm()
 						}
 					}
 				}
-				if(millis() - gameTimer > gameMoveTimeout)  //Player didn't make a move
+				if(millis() - gameTimer > gameMoveTimeout)  //Player didn't make a move, they lose
 				{
-					buttonLit = true;
-					gameLost = true;
-					lightEverything(loseGameColour);
-					showLoseWidget();
-					//meshEventToAnnounce = meshHackFail;
-					gameTimer = millis();
-					gameDelay = playButtonOnTime;
-					buttonPushed = numberOfGameButtons; //Cancel the push;
-					if(debug_uart_ != nullptr)
-					{
-						debug_uart_->print(debugGameSpace);
-						debug_uart_->println(debugTimedOut);
-					}
+					loseGame();
 				}
 				if(gamePosition > successLevel)
 				{
@@ -943,10 +950,166 @@ void ESPUIgames::runFsm()
 	}
 	else if(typeOfGame == gameType::whackamole)
 	{
+		if(gameStarted == false)
+		{
+			/*
+			if(millis() - blinkTimer > blinkInterval)
+			{
+				blinkTimer = millis();
+				if(redLEDfitted)
+				{
+					if(redLEDstate == true)
+					{
+						digitalWrite(redLEDpin,LOW);
+						blinkInterval = maxBlinkInterval;
+						redLEDstate = false;
+					}
+					else
+					{
+						digitalWrite(redLEDpin,HIGH);
+						blinkInterval = minBlinkInterval;
+						redLEDstate = true;
+					}
+				}
+			}
+			*/
+		}
+		else
+		{
+			/*
+			if(millis() - lastMeshMessage > alertTimeout)
+			{
+				stopGame();
+			}
+			*/
+			if(gameLost == false)
+			{
+				newMole();
+			}
+			if(buttonPushed < numberOfGamePlayButtons)
+			{
+				whackMole(buttonPushed); //Do this here rather than in the callback, to fix stability issue
+			}
+		}
 	}
 	#ifdef ESP8266
 	} // HeapSelectIram
 	#endif
+}
+void ESPUIgames::loseGame()
+{
+	buttonLit = true;
+	gameLost = true;
+	lightEverything(loseGameColour);
+	showLoseWidget();
+	gameTimer = millis();
+	gameDelay = 5000;
+	buttonPushed = numberOfGamePlayButtons; //Cancel any push;
+	//meshEventToAnnounce = meshHackFail;
+	if(debug_uart_ != nullptr)
+	{
+		debug_uart_->print(debugGameSpace);
+		debug_uart_->println(debugLost);
+	}
+}
+void ESPUIgames::newMole()
+{
+	if(numberOfLitPlayButtons < numberOfGamePlayButtons)
+	{
+		if(millis() - gameTimer > gameDelay)
+		{
+			gameTimer = millis();
+			uint8_t randomButton = random(0, numberOfGamePlayButtons);  //Pick a random mole
+			if(buttonTriggered[randomButton] == false)
+			{
+				lightButton(randomButton, ControlColor::Sunflower);
+				buttonTriggered[randomButton] = true;
+				numberOfLitPlayButtons++;
+				if(debug_uart_ != nullptr)
+				{
+					debug_uart_->printf("New mole %02u ID %02u total %02u\n",randomButton,gamePlayButtonIDs[randomButton],numberOfLitPlayButtons);
+				}
+				return;
+			}
+			else
+			{
+				lightButton(randomButton, ControlColor::Alizarin);
+				gameSpeedup();
+				return;
+			}
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print('.');
+			}
+		}
+	}
+	else if(numberOfLitPlayButtons == numberOfGamePlayButtons)
+	{
+		loseGame();
+	}
+}
+void ESPUIgames::whackMole(uint8_t index)
+{
+	if(buttonTriggered[index])
+	{
+		buttonPushed = numberOfGamePlayButtons;
+		buttonTriggered[index] = false;
+		if(numberOfLitPlayButtons > 0)
+		{
+			numberOfLitPlayButtons--;
+		}
+		extinguishButton(index);
+		successLevel++;
+		if(debug_uart_ != nullptr)
+		{
+			debug_uart_->printf("Whacked mole %02u now %02u, score %03u!\n", index, numberOfLitPlayButtons, successLevel);
+		}
+		if(numberOfLitPlayButtons == 0)
+		{
+			if(random(0,5) == 4)
+			{
+				gameSpeedReset();
+			}
+			else
+			{
+				gameSpeedup();
+			}
+		}
+	}
+	else
+	{
+		buttonPushed = numberOfGamePlayButtons; //Cancel the incorrect push;
+	}
+}
+
+void ESPUIgames::gameSpeedup()
+{
+	if(gameDelay > gameSpeedupAmount)
+	{
+		gameDelay -= gameSpeedupAmount;
+		//displayAlertLevel();
+		if(debug_uart_ != nullptr)
+		{
+			debug_uart_->printf_P(PSTR("Moles sped up to every %ums\n\r"),gameDelay);
+		}
+	}
+	else
+	{
+		gameDelay = gameSpeedupAmount;
+	}
+}
+void ESPUIgames::gameSpeedReset()
+{
+	gameDelay = maxGameDelay;
+	if(maxGameDelay > gameSpeedupAmount)
+	{
+		maxGameDelay = maxGameDelay - gameSpeedupAmount;
+		//displayAlertLevel();
+		if(debug_uart_ != nullptr)
+		{
+			debug_uart_->printf_P(PSTR("Mole interval reset, now %ums\n\r"),maxGameDelay);
+		}
+	}
 }
 void ESPUIgames::hideWinWidget()
 {
@@ -959,6 +1122,7 @@ void ESPUIgames::hideWinWidget()
 			debug_uart_->println(debugWidget);
 		}
 		ESPUI.updateVisibility(winWidgetId, false);
+		//ESPUI.updateControl(winWidgetId);
 		ESPUI.jsonReload();
 		winWidgetVisible = false;
 	}
@@ -974,6 +1138,7 @@ void ESPUIgames::showWinWidget()
 			debug_uart_->println(debugWidget);
 		}
 		ESPUI.updateVisibility(winWidgetId, true);
+		//ESPUI.updateControl(winWidgetId);
 		ESPUI.jsonReload();
 		winWidgetVisible = true;
 	}
@@ -989,6 +1154,7 @@ void ESPUIgames::hideLoseWidget()
 			debug_uart_->println(debugWidget);
 		}
 		ESPUI.updateVisibility(loseWidgetId, false);
+		//ESPUI.updateControl(loseWidgetId);
 		ESPUI.jsonReload();
 		loseWidgetVisible = false;
 	}
@@ -1004,6 +1170,7 @@ void ESPUIgames::showLoseWidget()
 			debug_uart_->println(debugWidget);
 		}
 		ESPUI.updateVisibility(loseWidgetId, true);
+		//ESPUI.updateControl(loseWidgetId);
 		ESPUI.jsonReload();
 		loseWidgetVisible = true;
 	}
