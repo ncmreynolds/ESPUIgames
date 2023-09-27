@@ -29,15 +29,20 @@ class ESPUIgames	{
 		void setTitle(const char* title);									//Set the title used on the page
 		void setTabTitle(const char* title);								//Set the title used on the game tab, which you may want to be different
 		void setLength(uint8_t length);										//Set the game length in turns
+		void setMaximumAttempts(uint8_t number);							//How many tries the player has at a game
 		void setWinContent(const char* label, const char* content);			//Set the content used in the win popup
-		void setLoseContent(const char* label, const char* content);		//Set the content used in the lose popup
+		void setLoseContent(const char* label, const char* content, const char* completeLossContent = nullptr);		//Set the content used in the lose popup
 		//Help
 		void setHelpTabTitle(const char* title);							//Set the title used on the help tab
 		void setHelpContent(const char* label, const char* content);		//Set the content used in the help tab
 		void addHelpTab();													//Add ESPUIgame help tab
 		//Controls
 		void enableStartSwitch(const char* label = nullptr);				//Add a 'game start' switch
-		bool addPlayButton(char* title, char* label, ControlColor colour);
+		bool addPlayButton(const char* title, const char* label, const ControlColor colour);	//Add a play button
+		//Events
+		bool playing();
+		bool won();															//True if won
+		bool lost();														//True if lost
 	protected:
 	private:
 		Stream *debug_uart_ = nullptr;										//The stream used for the debugging
@@ -46,6 +51,9 @@ class ESPUIgames	{
 		gameType typeOfGame = gameType::simon;								//The type of game
 		char* gameTitle = nullptr;											//Game title on page
 		uint8_t gameLength = 4;												//Length of game in turns, should that be important for the specific game
+		uint8_t maximumGameLength = 8;												//Length of game in turns, should that be important for the specific game
+		uint8_t maximumAttempts = 0;										//Number of game attempts
+		uint8_t currentAttempt = 0;
 		uint8_t* gameChoices = nullptr;										//Series of game choices if that should be important for the specific game
 		bool* buttonTriggered = nullptr;
 		static constexpr uint8_t maximumNumberOfGameButtons = 16;			//Max number of game buttons
@@ -75,7 +83,7 @@ class ESPUIgames	{
 		uint32_t gameTimer = 0;
 		uint32_t gameDelay = 5000;
 		uint32_t maxGameDelay = 5000;
-		uint32_t gameSpeedupAmount = 250;
+		uint32_t gameSpeedupAmount = 500;
 		uint32_t gameMoveTimeout = 15000;
 		bool buttonLit = false;												//Is any game button lit?
 		const uint32_t playButtonOnTime = 750;								//Time the play button is lit
@@ -105,9 +113,11 @@ class ESPUIgames	{
 		void hideWinWidget();
 		void showWinWidget();
 		uint16_t loseWidgetId = 0;
+		uint16_t totalLossWidgetId = 0;
 		bool loseWidgetVisible = false;
 		char* gameLoseLabel = nullptr;										//Label for the lose box
 		char* gameLoseContent = nullptr;									//What's in the lose box
+		char* gameTotalLossContent = nullptr;								//What's in the lose box
 		void hideLoseWidget();
 		void showLoseWidget();
 		//Help
@@ -133,36 +143,38 @@ class ESPUIgames	{
 		static void playButtonCallback(Control* sender, int type);			//Callback for play buttons
 		static void startSwitchCallback(Control* sender, int value);		//Callback for the game start/end switch
 		//String literals used for button labels, debug output etc
-		static constexpr char* gameTabLabel0 PROGMEM = "Game";
-		static constexpr char* gameTabLabel1 PROGMEM = "Help";
-		static constexpr char* gameHelp0 PROGMEM = "Play back the sequence";
-		static constexpr char* gameHelp1 PROGMEM = "Push the buttons as they light";
-		static constexpr char* gameTypeDescriptionSimon PROGMEM = "Simon-says";
-		static constexpr char* gameTypeDescriptionWhackAmole PROGMEM = "Whack-a-mole";
-		static constexpr char* defaultStartSwitchLabel PROGMEM = "Start";
-		static constexpr char* debugColonSpace PROGMEM = ": ";
-		static constexpr char* debugControlColonSpace PROGMEM = "Control: ";
-		static constexpr char* debugDashGt PROGMEM = "->";
-		static constexpr char* debugOk PROGMEM = "OK";
-		static constexpr char* debugFailed PROGMEM = "failed";
-		static constexpr char* debugDown PROGMEM = "down";
-		static constexpr char* debugUp PROGMEM = "up";
-		static constexpr char* debugOn PROGMEM = "on";
-		static constexpr char* debugOff PROGMEM = "off";
-		static constexpr char* debugGameSpace PROGMEM = "Game ";
-		static constexpr char* debugWon PROGMEM = "won";
-		static constexpr char* debugTimedOut PROGMEM = "timed out";
-		static constexpr char* debugReset PROGMEM = "reset";
-		static constexpr char* debugStopped PROGMEM = "stopped";
-		static constexpr char* debugLost PROGMEM = "lost";
-		static constexpr char* debugPlayerSpace PROGMEM = "Player ";
-		static constexpr char* debugComputerSpace PROGMEM = "Computer ";
-		static constexpr char* debugTurn PROGMEM = "turn";
-		static constexpr char* debugShowingSpace PROGMEM = "Showing ";
-		static constexpr char* debugHidingSpace PROGMEM = "Hiding ";
-		static constexpr char* debugWinSpace PROGMEM = "win ";
-		static constexpr char* debugLoseSpace PROGMEM = "lose ";
-		static constexpr char* debugWidget PROGMEM = "widget";
+		static constexpr char* gameTabLabel0 PROGMEM = (char*)"Game";
+		static constexpr char* gameTabLabel1 PROGMEM = (char*)"Help";
+		static constexpr char* gameHelp0 PROGMEM = (char*)"Play back the sequence";
+		static constexpr char* gameHelp1 PROGMEM = (char*)"Push the buttons as they light";
+		static constexpr char* gameTypeDescriptionSimon PROGMEM = (char*)"Simon-says";
+		static constexpr char* gameTypeDescriptionWhackAmole PROGMEM = (char*)"Whack-a-mole";
+		static constexpr char* defaultStartSwitchLabel PROGMEM = (char*)"Start";
+		static constexpr char* debugColonSpace PROGMEM = (char*)": ";
+		static constexpr char* debugControlColonSpace PROGMEM = (char*)"Control: ";
+		static constexpr char* debugDashGt PROGMEM = (char*)"->";
+		static constexpr char* debugOk PROGMEM = (char*)"OK";
+		static constexpr char* debugFailed PROGMEM = (char*)"failed";
+		static constexpr char* debugDown PROGMEM = (char*)"down";
+		static constexpr char* debugUp PROGMEM = (char*)"up";
+		static constexpr char* debugOn PROGMEM = (char*)"on";
+		static constexpr char* debugOff PROGMEM = (char*)"off";
+		static constexpr char* debugGameSpace PROGMEM = (char*)"Game ";
+		static constexpr char* debugWon PROGMEM = (char*)"won";
+		static constexpr char* debugTimedOut PROGMEM = (char*)"timed out";
+		static constexpr char* debugReset PROGMEM = (char*)"reset";
+		static constexpr char* debugStopped PROGMEM = (char*)"stopped";
+		static constexpr char* debugLost PROGMEM = (char*)"lost";
+		static constexpr char* debugPlayerSpace PROGMEM = (char*)"Player ";
+		static constexpr char* debugComputerSpace PROGMEM = (char*)"Computer ";
+		static constexpr char* debugTurn PROGMEM = (char*)"turn";
+		static constexpr char* debugShowingSpace PROGMEM = (char*)"Showing ";
+		static constexpr char* debugHidingSpace PROGMEM = (char*)"Hiding ";
+		static constexpr char* debugWinSpace PROGMEM = (char*)"win ";
+		static constexpr char* debugLoseSpace PROGMEM = (char*)"lose ";
+		static constexpr char* debugTotalLossSpace PROGMEM = (char*)"total loss ";
+		static constexpr char* debugWidget PROGMEM = (char*)"widget";
+		static constexpr char* spaceAttemptspace PROGMEM = (char*)" attempt ";
 };
 extern ESPUIgames game;	//Create an instance of the class, as only one is practically usable at a time
 #endif

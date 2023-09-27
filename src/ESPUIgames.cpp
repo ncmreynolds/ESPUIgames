@@ -22,7 +22,7 @@ ESPUIgames::~ESPUIgames()	//Destructor function
 void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(debug_uart_ != nullptr)
 	{
@@ -97,6 +97,18 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 		}
 		loseWidgetId = ESPUI.addControl(ControlType::Label, gameLoseLabel, gameLoseContent, loseGameColour, gameTabIDs[0]);
 		ESPUI.updateVisibility(loseWidgetId, false);
+		if(gameTotalLossContent != nullptr)
+		{
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print(F("Adding lose content: "));
+				debug_uart_->print(gameLoseLabel);
+				debug_uart_->print('/');
+				debug_uart_->println(gameTotalLossContent);
+			}
+			totalLossWidgetId = ESPUI.addControl(ControlType::Label, gameLoseLabel, gameTotalLossContent, loseGameColour, gameTabIDs[0]);
+			ESPUI.updateVisibility(totalLossWidgetId, false);
+		}
 	}
 	if(startSwitchEnabled == true || loseWidgetId != 0 || winWidgetId !=0)
 	{
@@ -129,6 +141,23 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 			//ESPUI.setPanelWide(gamePlayButtonIDs[index], true);
 		}
 	}
+	else
+	{
+		for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
+		{
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print(F("Adding button: "));
+				debug_uart_->print(index);
+				debug_uart_->print('-');
+				debug_uart_->print(gamePlayButtonTitle[index]);
+				debug_uart_->print('/');
+				debug_uart_->println(gamePlayButtonLabel[index]);
+			}
+			gamePlayButtonIDs[index] = ESPUI.addControl(ControlType::Button, gamePlayButtonTitle[index], gamePlayButtonLabel[index], defaultGameColour, gameTabIDs[0], &playButtonCallback);
+			//ESPUI.setPanelWide(gamePlayButtonIDs[index], true);
+		}
+	}
 	//Set the pushed button flags to 'none'
 	buttonLit = false;
 	buttonPushed = numberOfGamePlayButtons;
@@ -136,7 +165,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 	//Assign storage for the game choices, if necessary
 	if(typeOfGame == gameType::simon)
 	{
-		gameChoices = new uint8_t[gameLength];
+		gameChoices = new uint8_t[maximumGameLength];
 	}
 	else if(typeOfGame == gameType::whackamole)
 	{
@@ -150,7 +179,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::addGameTab()
 void ICACHE_FLASH_ATTR ESPUIgames::addHelpTab()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	//Set default tab title, if necessary
 	if(gameTabLabels[1] == nullptr)
@@ -192,7 +221,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::addHelpTab()
 void ICACHE_FLASH_ATTR ESPUIgames::debug(Stream &terminalStream)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	debug_uart_ = &terminalStream;		//Set the stream used for the terminal
 	#if defined(ESP8266)
@@ -209,7 +238,7 @@ void ICACHE_FLASH_ATTR ESPUIgames::debug(Stream &terminalStream)
 void ESPUIgames::type(gameType t)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	typeOfGame = t;	//Set the game type
 	#ifdef ESP8266
@@ -220,18 +249,37 @@ void ESPUIgames::type(gameType t)
 void ESPUIgames::setLength(uint8_t length)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	gameLength = length;
+	if(debug_uart_ != nullptr)
+	{
+		  debug_uart_->print(F("Game length: "));
+		  debug_uart_->println(gameLength);
+	}
 	#ifdef ESP8266
 	} // HeapSelectIram
 	#endif
 }
-
+void ESPUIgames::setMaximumAttempts(uint8_t number)
+{
+	#ifdef ESP8266
+	{ //HeapSelectIram doAllocationsInIRAM;
+	#endif
+	maximumAttempts = number;
+	if(debug_uart_ != nullptr)
+	{
+		  debug_uart_->print(F("Maximum attempts: "));
+		  debug_uart_->println(maximumAttempts);
+	}
+	#ifdef ESP8266
+	} // HeapSelectIram
+	#endif
+}
 void ESPUIgames::playButtonCallback(Control* sender, int value)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(game.debug_uart_ != nullptr)
 	{
@@ -264,7 +312,7 @@ void ESPUIgames::playButtonCallback(Control* sender, int value)
 void ESPUIgames::startSwitchCallback(Control* sender, int value)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(game.debug_uart_ != nullptr)
 	{
@@ -281,22 +329,32 @@ void ESPUIgames::startSwitchCallback(Control* sender, int value)
 			}
 			if(game.gameStarted == false)
 			{
-			  if(game.gameEnabled == true)
-			  {
-				if(game.debug_uart_ != nullptr)
+				if(game.gameEnabled == true)
 				{
-				  game.debug_uart_->println(F("Game beginning"));
+					if(game.currentAttempt < game.maximumAttempts)
+					{
+						if(game.debug_uart_ != nullptr)
+						{
+						  game.debug_uart_->println(F("Game beginning"));
+						}
+						game.startNewGame();
+					}
+					else
+					{
+						if(game.debug_uart_ != nullptr)
+						{
+						  game.debug_uart_->println(F("Game attempts exhausted"));
+						}
+					}
 				}
-				game.startNewGame();
-			  }
-			  else
-			  {
-				ESPUI.updateSwitcher(game.startSwitchWidgetId, false);
-				if(game.debug_uart_ != nullptr)
+				else
 				{
-				  game.debug_uart_->println(F("Game not enabled"));
+					ESPUI.updateSwitcher(game.startSwitchWidgetId, false);
+					if(game.debug_uart_ != nullptr)
+					{
+					  game.debug_uart_->println(F("Game not enabled"));
+					}
 				}
-			  }
 			}
 			else
 			{
@@ -312,16 +370,19 @@ void ESPUIgames::startSwitchCallback(Control* sender, int value)
 			{
 				game.debug_uart_->println(debugOff);
 			}
-			ESPUI.getControl(game.startSwitchWidgetId)->color = game.defaultGameColour;
-			ESPUI.updateControl(game.startSwitchWidgetId);
-			if(game.gameWon == true || game.gameLost == true)
+			if(game.maximumAttempts == 0 || game.currentAttempt < game.maximumAttempts)
 			{
-				game.resetGame();
-				//meshEventToAnnounce = meshHackFail;
-			}
-			else if(game.gameStarted == true)
-			{
-				game.stopCurrentGame();
+				ESPUI.getControl(game.startSwitchWidgetId)->color = game.defaultGameColour;
+				ESPUI.updateControl(game.startSwitchWidgetId);
+				if(game.gameWon == true || game.gameLost == true)
+				{
+					game.resetGame();
+					//meshEventToAnnounce = meshHackFail;
+				}
+				else if(game.gameStarted == true)
+				{
+					game.stopCurrentGame();
+				}
 			}
 			break;
     }
@@ -332,7 +393,7 @@ void ESPUIgames::startSwitchCallback(Control* sender, int value)
 void ESPUIgames::setTitle(const char* title)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameTitle != nullptr)
 	{
@@ -351,7 +412,7 @@ char* ESPUIgames::title()
 void ESPUIgames::setTabTitle(const char* title)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameTabLabels[0] != nullptr)
 	{
@@ -366,7 +427,7 @@ void ESPUIgames::setTabTitle(const char* title)
 void ESPUIgames::setWinContent(const char* label, const char* content)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameWinLabel != nullptr)
 	{
@@ -384,10 +445,10 @@ void ESPUIgames::setWinContent(const char* label, const char* content)
 	} // HeapSelectIram
 	#endif
 }
-void ESPUIgames::setLoseContent(const char* label, const char* content)
+void ESPUIgames::setLoseContent(const char* label, const char* content, const char* completeLossContent)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameLoseLabel != nullptr)
 	{
@@ -401,6 +462,11 @@ void ESPUIgames::setLoseContent(const char* label, const char* content)
 	strcpy(gameLoseLabel, label);
 	gameLoseContent = new char[strlen(content) + 1];
 	strcpy(gameLoseContent, content);
+	if(completeLossContent != nullptr)
+	{
+		gameTotalLossContent = new char[strlen(completeLossContent) + 1];
+		strcpy(gameTotalLossContent, completeLossContent);
+	}
 	#ifdef ESP8266
 	} // HeapSelectIram
 	#endif
@@ -409,7 +475,7 @@ void ESPUIgames::setLoseContent(const char* label, const char* content)
 void ESPUIgames::setHelpTabTitle(const char* title)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameTabLabels[1] != nullptr)
 	{
@@ -424,7 +490,7 @@ void ESPUIgames::setHelpTabTitle(const char* title)
 void ESPUIgames::setHelpContent(const char* label, const char* content)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(gameHelpLabel != nullptr)
 	{
@@ -445,7 +511,7 @@ void ESPUIgames::setHelpContent(const char* label, const char* content)
 void ESPUIgames::enableStartSwitch(const char* label)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(label != nullptr)
 	{
@@ -462,15 +528,21 @@ void ESPUIgames::enableStartSwitch(const char* label)
 	#endif
 }
 
-bool ESPUIgames::addPlayButton(char* title, char* label, ControlColor colour)
+bool ESPUIgames::addPlayButton(const char* title, const char* label, const ControlColor colour)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(numberOfGamePlayButtons == maximumNumberOfGameButtons)
 	{
 		return false;
 	}
+	gamePlayButtonTitle[numberOfGamePlayButtons] = new char[strlen(title) + 1];
+	strcpy(gamePlayButtonTitle[numberOfGamePlayButtons], title);
+	gamePlayButtonLabel[numberOfGamePlayButtons] = new char[strlen(label) + 1];
+	strcpy(gamePlayButtonLabel[numberOfGamePlayButtons], label);
+	gamePlayButtonColour[numberOfGamePlayButtons] = colour;
+	numberOfGamePlayButtons++;
 	return true;
 	#ifdef ESP8266
 	} // HeapSelectIram
@@ -483,7 +555,7 @@ void ESPUIgames::lightButton(uint8_t index)
 void ESPUIgames::lightButton(uint8_t index, ControlColor colour)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	ESPUI.getControl(gamePlayButtonIDs[index])->color = colour;
 	ESPUI.updateControl(gamePlayButtonIDs[index]);
@@ -498,7 +570,7 @@ void ESPUIgames::lightButton(uint8_t index, ControlColor colour)
 void ESPUIgames::extinguishButton(uint8_t index)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	ESPUI.getControl(gamePlayButtonIDs[index])->color = defaultGameColour;
 	ESPUI.updateControl(gamePlayButtonIDs[index]);
@@ -513,7 +585,7 @@ void ESPUIgames::extinguishButton(uint8_t index)
 void ESPUIgames::lightEverything(ControlColor colour)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(startSwitchEnabled == true)
 	{
@@ -532,7 +604,7 @@ void ESPUIgames::lightEverything(ControlColor colour)
 uint8_t ESPUIgames::buttonIndexFromId(uint16_t id)
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	for(uint8_t index = 0; index < numberOfGamePlayButtons; index++)
 	{
@@ -550,7 +622,7 @@ uint8_t ESPUIgames::buttonIndexFromId(uint16_t id)
 void ESPUIgames::startNewGame()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(debug_uart_ != nullptr)
 	{
@@ -602,9 +674,10 @@ void ESPUIgames::startNewGame()
 	hideLoseWidget();
 	hideWinWidget();
 	gameLost = false;
+	gameWon = false;
 	numberOfLitPlayButtons = 0;
 	gameStarted = true;
-	gameDelay = 5000; //Wait 5s before starting the game
+	//gameDelay = 5000; //Wait 5s before starting the game
 	gameTimer = millis();
 	successLevel = 0;
 	#ifdef ESP8266
@@ -614,7 +687,7 @@ void ESPUIgames::startNewGame()
 void ESPUIgames::stopCurrentGame()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	successLevel = 0;
 	gameStarted = false;
@@ -646,7 +719,7 @@ void ESPUIgames::stopCurrentGame()
 void ESPUIgames::resetGame()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	successLevel = 0;
 	gameStarted = false;
@@ -678,24 +751,10 @@ void ESPUIgames::resetGame()
 void ESPUIgames::runFsm()
 {
 	#ifdef ESP8266
-	{ HeapSelectIram doAllocationsInIRAM;
+	{ //HeapSelectIram doAllocationsInIRAM;
 	#endif
 	if(typeOfGame == gameType::simon)
 	{
-		/*
-		if(firstRun == true)
-		{
-			if(winWidgetId != 0)
-			{
-				ESPUI.updateVisibility(winWidgetId, false);
-			}
-			if(loseWidgetId != 0)
-			{
-				ESPUI.updateVisibility(loseWidgetId, false);
-			}
-			firstRun = false;
-		}
-		*/
 		if(gameEnabled == false && millis() - lastGameCheckTime > gameCheckInterval)  //Only enable the game if ICE is up
 		{
 			lastGameCheckTime = millis();
@@ -877,8 +936,6 @@ void ESPUIgames::runFsm()
 						if(gameLost == true)
 						{
 							stopCurrentGame();
-							//disableUplink();
-							gameLost = false;
 						}
 						else
 						{
@@ -982,7 +1039,44 @@ void ESPUIgames::runFsm()
 				stopGame();
 			}
 			*/
-			if(gameLost == false)
+			if(successLevel == gameLength)
+			{
+				gameWon = true;
+				gameStarted = false;
+				//meshEventToAnnounce = meshHackSucceed;
+				if(debug_uart_ != nullptr)
+				{
+					debug_uart_->print(debugGameSpace);
+					debug_uart_->println(debugWon);
+				}
+				//Light up all the buttons
+				lightEverything(wonGameColour);
+				//Pop up a widget
+				showWinWidget();
+				/*
+				if(redLEDfitted)
+				{
+					redLEDstate = false;
+					digitalWrite(redLEDpin,LOW);
+				}
+				if(greenLEDfitted)
+				{
+					greenLEDstate = true;
+					digitalWrite(greenLEDpin,HIGH);
+				}
+				*/
+				#if defined(FILE_BROWSER)
+				//ESPUI.setEnabled(exampleFileViewControl, true);
+				//ESPUI.updateControl(exampleFileViewControl);
+				//ESPUI.setEnabled(exampleFileDownloadControl, true);
+				//ESPUI.updateControl(exampleFileDownloadControl);
+				//ESPUI.setEnabled(exampleFileDeleteControl, true);
+				//ESPUI.updateControl(exampleFileDeleteControl);
+				//ESPUI.removeControl(fileSystemLockedLabel,true);
+				//addFilesFromDirectory("files/", 1, fileSystemTab);
+				#endif
+			}
+			else if(gameLost == false)
 			{
 				newMole();
 			}
@@ -998,18 +1092,39 @@ void ESPUIgames::runFsm()
 }
 void ESPUIgames::loseGame()
 {
+	currentAttempt++;	//Increase the attempt number
+	if(typeOfGame == gameType::simon)
+	{
+		gameLength++;	//Make the game harder
+		if(gameLength > maximumGameLength)
+		{
+			gameLength = maximumGameLength;
+		}
+		if(maxGameDelay > 1000)
+		{
+			maxGameDelay = maxGameDelay - gameSpeedupAmount;
+		}
+	}
+	gameDelay = maxGameDelay;
 	buttonLit = true;
 	gameLost = true;
 	lightEverything(loseGameColour);
 	showLoseWidget();
 	gameTimer = millis();
-	gameDelay = 5000;
 	buttonPushed = numberOfGamePlayButtons; //Cancel any push;
 	//meshEventToAnnounce = meshHackFail;
 	if(debug_uart_ != nullptr)
 	{
 		debug_uart_->print(debugGameSpace);
-		debug_uart_->println(debugLost);
+		debug_uart_->print(debugLost);
+		debug_uart_->print(spaceAttemptspace);
+		debug_uart_->print(currentAttempt);
+		debug_uart_->print('/');
+		debug_uart_->print(maximumAttempts);
+		debug_uart_->print(F(" length: "));
+		debug_uart_->print(gameLength);
+		debug_uart_->print(F(" move time: "));
+		debug_uart_->println(gameDelay);
 	}
 }
 void ESPUIgames::newMole()
@@ -1154,6 +1269,10 @@ void ESPUIgames::hideLoseWidget()
 			debug_uart_->println(debugWidget);
 		}
 		ESPUI.updateVisibility(loseWidgetId, false);
+		if(gameTotalLossContent != nullptr)
+		{
+			ESPUI.updateVisibility(totalLossWidgetId, false);
+		}
 		//ESPUI.updateControl(loseWidgetId);
 		ESPUI.jsonReload();
 		loseWidgetVisible = false;
@@ -1163,17 +1282,44 @@ void ESPUIgames::showLoseWidget()
 {
 	if(loseWidgetId != 0 && loseWidgetVisible == false)
 	{
-		if(debug_uart_ != nullptr)
+		if(gameTotalLossContent != nullptr && maximumAttempts > 0 && currentAttempt >= maximumAttempts)
 		{
-			debug_uart_->print(debugShowingSpace);
-			debug_uart_->print(debugLoseSpace);
-			debug_uart_->println(debugWidget);
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print(debugShowingSpace);
+				debug_uart_->print(debugTotalLossSpace);
+				debug_uart_->println(debugWidget);
+			}
+			ESPUI.updateVisibility(totalLossWidgetId, true);
+			//ESPUI.updateControl(loseWidgetId);
 		}
-		ESPUI.updateVisibility(loseWidgetId, true);
-		//ESPUI.updateControl(loseWidgetId);
+		else
+		{
+			if(debug_uart_ != nullptr)
+			{
+				debug_uart_->print(debugShowingSpace);
+				debug_uart_->print(debugLoseSpace);
+				debug_uart_->println(debugWidget);
+			}
+			ESPUI.updateVisibility(loseWidgetId, true);
+			//ESPUI.updateControl(loseWidgetId);
+		}
 		ESPUI.jsonReload();
 		loseWidgetVisible = true;
 	}
 }
+bool ESPUIgames::playing()
+{
+	return gameStarted;
+}
+bool ESPUIgames::won()
+{
+	return gameWon;
+}
+bool ESPUIgames::lost()
+{
+	return gameLost;
+}
+
 ESPUIgames game;	//Create an instance of the class, as only one is practically usable at a time
 #endif
