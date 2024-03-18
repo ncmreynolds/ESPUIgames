@@ -276,6 +276,21 @@ void ESPUIgames::setMaximumAttempts(uint8_t number)
 	} // HeapSelectIram
 	#endif
 }
+void ESPUIgames::setGameSpeedup(uint32_t number)
+{
+	#ifdef ESP8266
+	{ //HeapSelectIram doAllocationsInIRAM;
+	#endif
+	gameSpeedupAmount = number;
+	if(debug_uart_ != nullptr)
+	{
+		  debug_uart_->print(F("Speedup amount(ms): "));
+		  debug_uart_->println(gameSpeedupAmount);
+	}
+	#ifdef ESP8266
+	} // HeapSelectIram
+	#endif
+}
 void ESPUIgames::playButtonCallback(Control* sender, int value)
 {
 	#ifdef ESP8266
@@ -331,7 +346,7 @@ void ESPUIgames::startSwitchCallback(Control* sender, int value)
 			{
 				if(game.gameEnabled == true)
 				{
-					if(game.currentAttempt < game.maximumAttempts)
+					if(game.currentAttempt < game.maximumAttempts || game.maximumAttempts == 0)
 					{
 						if(game.debug_uart_ != nullptr)
 						{

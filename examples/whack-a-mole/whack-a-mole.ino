@@ -78,7 +78,7 @@ void setup() {
 #endif
             char ap_ssid[25];
             snprintf(ap_ssid, 26, "ESPUI-%08X", chipid);
-            WiFi.softAP(/* SSID */ ap_ssid, /* pre-shared key */ NULL, /* channel */ 1, /* hidden */ 0, /* max connections */ 1, /* ftm_responder */ false);  //Limit the connection so only one player
+            WiFi.softAP(/* SSID */ ap_ssid, /* pre-shared key */ "12345678", /* channel */ 1, /* hidden */ 0, /* max connections */ 1, /* ftm_responder */ false);  //Limit the connection so only one player
 
             timeout = 5;
 

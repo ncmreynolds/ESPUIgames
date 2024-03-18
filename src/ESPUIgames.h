@@ -30,6 +30,7 @@ class ESPUIgames	{
 		void setTabTitle(const char* title);								//Set the title used on the game tab, which you may want to be different
 		void setLength(uint8_t length);										//Set the game length in turns
 		void setMaximumAttempts(uint8_t number);							//How many tries the player has at a game
+		void setGameSpeedup(uint32_t number);								//Set the speedup amount
 		void setWinContent(const char* label, const char* content);			//Set the content used in the win popup
 		void setLoseContent(const char* label, const char* content, const char* completeLossContent = nullptr);		//Set the content used in the lose popup
 		//Help
