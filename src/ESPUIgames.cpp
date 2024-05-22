@@ -1306,6 +1306,7 @@ void ESPUIgames::showLoseWidget()
 				debug_uart_->println(debugWidget);
 			}
 			ESPUI.updateVisibility(totalLossWidgetId, true);
+			gameTotallyLost = true;
 			//ESPUI.updateControl(loseWidgetId);
 		}
 		else
@@ -1333,7 +1334,7 @@ bool ESPUIgames::won()
 }
 bool ESPUIgames::lost()
 {
-	return gameLost;
+	return gameLost || gameTotallyLost;
 }
 
 ESPUIgames game;	//Create an instance of the class, as only one is practically usable at a time

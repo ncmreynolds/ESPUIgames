@@ -77,6 +77,7 @@ class ESPUIgames	{
 		bool gameEnabled = true;
 		bool gameStarted = false;
 		bool gameLost = false;
+		bool gameTotallyLost = false;
 		bool gameWon = false;
 		bool computerTurn = true;
 		uint8_t gamePosition = 0;											//How far in is the game, in turns
