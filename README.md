@@ -34,7 +34,7 @@ This project uses [Semantic Versioning](http://semver.org/) to be compatible wit
 
 ### Version history
 
-- #### 0.1.0 First public release.
+- #### 0.1.1 added show/hide feature to game tab
 
 
 For a full list of available versions, see the [repository tag list](https://github.com/ncmreynolds/ESPUIgames/tags). There is also a [change log](documentation/CHANGELOG.md) included in the documentation.
