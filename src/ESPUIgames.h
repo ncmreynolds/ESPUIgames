@@ -33,10 +33,14 @@ class ESPUIgames	{
 		void setGameSpeedup(uint32_t number);								//Set the speedup amount
 		void setWinContent(const char* label, const char* content);			//Set the content used in the win popup
 		void setLoseContent(const char* label, const char* content, const char* completeLossContent = nullptr);		//Set the content used in the lose popup
+		void hideGameTab();													//Hide the tab
+		void showGameTab();													//Show the tab, usually needed after earlier hiding it
 		//Help
 		void setHelpTabTitle(const char* title);							//Set the title used on the help tab
 		void setHelpContent(const char* label, const char* content);		//Set the content used in the help tab
 		void addHelpTab();													//Add ESPUIgame help tab
+		void hideHelpTab();													//Hide the tab
+		void showHelpTab();													//Show the tab, usually needed after earlier hiding it
 		//Controls
 		void enableStartSwitch(const char* label = nullptr);				//Add a 'game start' switch
 		bool addPlayButton(const char* title, const char* label, const ControlColor colour);	//Add a play button

@@ -218,6 +218,16 @@ void ICACHE_FLASH_ATTR ESPUIgames::addHelpTab()
 	#endif
 }
 
+void ESPUIgames::hideHelpTab()
+{
+	ESPUI.updateVisibility(gameTabIDs[1], false);
+}
+
+void ESPUIgames::showHelpTab()
+{
+	ESPUI.updateVisibility(gameTabIDs[1], true);
+}
+
 void ICACHE_FLASH_ATTR ESPUIgames::debug(Stream &terminalStream)
 {
 	#ifdef ESP8266
@@ -485,6 +495,18 @@ void ESPUIgames::setLoseContent(const char* label, const char* content, const ch
 	#ifdef ESP8266
 	} // HeapSelectIram
 	#endif
+}
+
+void ESPUIgames::hideGameTab()
+{
+	ESPUI.updateVisibility(gameTabIDs[0], false);
+	ESPUI.jsonReload();	//Needed to force a refresh
+}
+
+void ESPUIgames::showGameTab()
+{
+	ESPUI.updateVisibility(gameTabIDs[0], true);
+	ESPUI.jsonReload();	//Needed to force a refresh
 }
 
 void ESPUIgames::setHelpTabTitle(const char* title)
